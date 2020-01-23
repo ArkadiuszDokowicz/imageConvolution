@@ -119,7 +119,7 @@ public class Equation {
         imageMatrixB = new int[3][3];
         for(int i=0;i<3;i++){
             for(int j=0;j<3;j++){
-                Color mycolor = new Color(this.imageMatrix[i][j]);
+                Color mycolor = new Color((int) this.imageMatrix[i][j]);
                 imageMatrixR[i][j]=mycolor.getRed();
                 imageMatrixG[i][j]=mycolor.getGreen();
                 imageMatrixB[i][j]=mycolor.getBlue();

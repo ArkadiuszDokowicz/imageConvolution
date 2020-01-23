@@ -3,6 +3,7 @@ package application.convolutionAlgorithm;
 import com.google.common.collect.Lists;
 
 import javax.imageio.ImageIO;
+import javax.naming.ldap.UnsolicitedNotification;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -17,28 +18,23 @@ import static application.Main.NUMBER_OF_THREADS;
 
 
 public class AlgorithmExpert {
-    private List<Equation> solvedEquations= new ArrayList<>();
     long start;
     long elapsedTimeMillis;
 
     public BufferedImage singleConvolution(File file, int[][] filter) throws IOException, InterruptedException {
        BufferedImage inputImage = ImageIO.read(file);
 
-       ArrayList<Equation> equations = createEquations(inputImage,filter);
-       List<List<Equation>> splitEquations= splitLists(equations);
+       createEquationsOnThreads(inputImage,filter);
+        List<List<Equation>> splitEquations= splitLists(UnSolvedEquationsCollection.getInstance().getEquations());
         solveEquationOnThreads(splitEquations);
-
-
-
-
-
         BufferedImage outputImage = new BufferedImage(inputImage.getWidth(), inputImage.getHeight(),BufferedImage.TYPE_INT_RGB );
-        //TODO create new image
+
         for(Equation equation:ResultsCollection.getInstance().getEquations()) {
             outputImage.setRGB(equation.getxPosition(), equation.getyPosition(),
                     new Color(equation.getResultR(),equation.getResultB(),equation.getResultB()).getRGB());
         }
         ResultsCollection.getInstance().flushMemory();
+        UnSolvedEquationsCollection.getInstance().flushMemory();
         return outputImage;
     }
     private  List<List<Equation>> splitLists(ArrayList<Equation> equations){
@@ -47,48 +43,38 @@ public class AlgorithmExpert {
         return equationsParts;
     }
 
-    private ArrayList<Equation> createEquations(BufferedImage inputImage,int[][] filter){
+    private void createEquationsOnThreads(BufferedImage inputImage,int[][] filter) throws InterruptedException {
+        ThreadPoolExecutor thread_factory= (ThreadPoolExecutor) Executors.newFixedThreadPool(NUMBER_OF_THREADS);
         start = System.currentTimeMillis();
-      //Create thread synchronized class for list
-        ArrayList<Equation> equations = new ArrayList<>();
-        //create thread algorithm for this equations
-        for (int x = 0; x <inputImage.getWidth() ; x++) {
-            for (int y = 0; y < inputImage.getHeight(); y++) {
-
-                int[][] matrix = new int[filter.length][filter.length];
-                try {
-                    if(x!=0 && y!=0 && x!=inputImage.getWidth()-1 && y!=inputImage.getHeight()-1){
-                        matrix[0][0] = inputImage.getRGB(x-1,y-1);
-                        matrix[0][1] = inputImage.getRGB(x,y-1);
-                        matrix[0][2] = inputImage.getRGB(x+1,y-1);
-                        matrix[1][0] = inputImage.getRGB(x-1,y);
-                        matrix[1][1] = inputImage.getRGB(x,y);
-                        matrix[1][2] = inputImage.getRGB(x+1, y);
-                        matrix[2][0] = inputImage.getRGB(x-1,y+1);
-                        matrix[2][1] = inputImage.getRGB(x,y+1);
-                        matrix[2][2] = inputImage.getRGB(x+1,y+1);
-                    equations.add(new Equation(x,y,matrix,filter,true));
-                    }
-                    else{
-                        Color mycolor = new Color(inputImage.getRGB(x,y));
-                        Equation equation = new Equation(x,y,null,filter,false);
-                        equation.setResultR(mycolor.getRed());
-                        equation.setResultG(mycolor.getGreen());
-                        equation.setResultB(mycolor.getBlue());
-                        solvedEquations.add(equation);
-                    }
-                }
-                catch (ArrayIndexOutOfBoundsException exception){
-                    System.out.println(x+" "+y);
-                    exception.printStackTrace();
-                }
-
+        int height= inputImage.getHeight();
+        int range = (int) Math.floor(height/NUMBER_OF_THREADS);
+        int first,last;
+        for(int i=0;i<NUMBER_OF_THREADS;i++) {
+            if(i==0){
+                first=0;last=range;
+            }else
+            if(i < NUMBER_OF_THREADS - 1){
+                first=range*i;
+                last=first+range;
+            }else {
+                first=range*i;
+                last=height;
             }
+            int finalFirst = first;
+            int finalLast = last;
+            thread_factory.submit(new Runnable() {
+                @Override
+                public void run() {
+                    new CreateEquationThread(inputImage, finalFirst, finalLast,filter).run();
+                }
+            });
+
         }
-        ResultsCollection.getInstance().addToEquations(solvedEquations);
+        thread_factory.shutdown();
+        thread_factory.awaitTermination(1, TimeUnit.DAYS);
         elapsedTimeMillis = System.currentTimeMillis()-start;
         System.out.println(elapsedTimeMillis +" ms passed for divide equations");
-        return equations;
+
     }
 
     private void solveEquationOnThreads(List<List<Equation>> splitEquations) throws InterruptedException {

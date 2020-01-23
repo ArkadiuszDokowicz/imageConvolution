@@ -16,10 +16,10 @@ public class Main {
     public static void main(String[] args) throws IOException, InterruptedException {
         AlgorithmExpert algorithmExpert = new AlgorithmExpert();
 
-        String imagePath ="C:/Users/arkdo/IdeaProjects/steganography/PanMontana.jpg";
-        //File file2 = new File(imagePath);
+        String imagePath ="C:/Users/arkdo/IdeaProjects/ImageGenerator/PanMontana.jpg";
+        File file2 = new File(imagePath);
 
-        File file2 = ImageGenerator.generateImage("first.jpg",500,450);
+        //File file2 = ImageGenerator.generateImage("first.jpg",500,450);
 
         long start = System.currentTimeMillis();
         long elapsedTimeMillis;
@@ -33,6 +33,7 @@ public class Main {
         }
 
         elapsedTimeMillis = System.currentTimeMillis()-start;
-        System.out.println(elapsedTimeMillis +" ms passed for "+NUMBER_OF_THREADS +"threads");
+        System.out.println(elapsedTimeMillis +" ms passed for all operations");
+
     }
 }
